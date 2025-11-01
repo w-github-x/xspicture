@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增强版离线像素画生成器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+        
+        .left-panel {
+            flex: 1;
+            min-width: 350px;
+            padding: 20px;
+        }
+        
+        .right-panel {
+            flex: 2;
+            min-width: 500px;
+            padding: 20px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #6a11cb;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 25px;
+            background: #f9f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            background: #f0f0ff;
+            transform: translateY(-3px);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #6a11cb;
+            margin-bottom: 15px;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        h2 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #444;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin: 15px 0 10px;
+            color: #555;
+        }
+        
+        .palette-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .palette-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        
+        .palette-option:hover {
+            transform: scale(1.1);
+        }
+        
+        .palette-option.active {
+            border-color: #6a11cb;
+            transform: scale(1.1);
+        }
+        
+        .adaptive-controls {
+            margin-top: 15px;
+            padding: 10px;
+            background: #edf2ff;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .adaptive-controls.active {
+            display: block;
+        }
+        
+        .adaptive-controls input {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .custom-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .color-box {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        
+        .color-box:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .color-box .color-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .color-box:hover .color-tooltip {
+            opacity: 1;
+        }
+        
+        .color-box .delete-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff4757;
+            color: white;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: pointer;
+        }
+        
+        .color-box:hover .delete-btn {
+            opacity: 1;
+        }
+        
+        .add-color {
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #666;
+        }
+        
+        .dimension-controls {
+            display: flex;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .dimension-control {
+            flex: 1;
+        }
+        
+        input[type="range"], input[type="number"] {
+            width: 100%;
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .preview-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        canvas {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            background: white;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .config-buttons {
+            margin-top: 15px;
+            gap: 10px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .generate-btn {
+            background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+        }
+        
+        .generate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(106, 17, 203, 0.3);
+        }
+        
+        .download-btn {
+            background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 15px rgba(17, 153, 142, 0.3);
+        }
+
+        .export-btn {
+            background: linear-gradient(90deg, #e67e22 0%, #f39c12 100%);
+            color: white;
+        }
+
+        .import-btn {
+            background: linear-gradient(90deg, #8e44ad 0%, #9b59b6 100%);
+            color: white;
+        }
+
+        .help-btn {
+            background: linear-gradient(90deg, #2980b9 0%, #3498db 100%);
+            color: white;
+        }
+        
+        .info-text {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+        }
+        
+        .canvas-container {
+            position: relative;
+            margin: 20px 0;
+            display: inline-block;
+        }
+        
+        .canvas-label {
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: #6a11cb;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .dimension-display {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .color-edit-modal, .config-modal, .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .color-edit-modal.active, .config-modal.active, .help-modal.active {
+            display: flex;
+        }
+        
+        .color-edit-content, .config-content, .help-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            overflow-y: auto;
+        }
+
+        .config-content {
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .help-content {
+            width: 800px;
+            max-width: 95%;
+            max-height: 90vh;
+            text-align: left;
+            padding: 30px;
+        }
+
+        .help-section {
+            margin-bottom: 25px;
+        }
+
+        .help-steps {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        .help-steps li {
+            margin-bottom: 8px;
+        }
+
+        .help-feature {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .help-feature h4 {
+            margin-bottom: 8px;
+            color: #6a11cb;
+        }
+        
+        .color-edit-content h3, .config-content h3, .help-content h3 {
+            margin-bottom: 15px;
+        }
+        
+        .color-preview {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        
+        .color-input, .config-textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-family: monospace;
+        }
+
+        .config-textarea {
+            height: 200px;
+            text-align: left;
+            font-size: 0.85rem;
+            resize: none;
+        }
+        
+        .color-edit-buttons, .config-buttons, .help-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .color-edit-buttons button, .config-buttons button, .help-buttons button {
+            flex: 1;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #777;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+
+        /* 像素检查器样式 */
+        .pixel-inspector {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .inspector-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .inspector-header .icon {
+            font-size: 1.5rem;
+            color: #6a11cb;
+            margin-right: 10px;
+        }
+
+        .inspector-header h2 {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .coordinate-inputs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        .coordinate-inputs > div {
+            flex: 1;
+        }
+
+        .coordinate-inputs label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .coordinate-inputs input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        .inspector-display {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .color-preview-box {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .color-info {
+            text-align: left;
+        }
+
+        .color-info p {
+            margin: 5px 0;
+            font-weight: 600;
+        }
+
+        .inspector-tip {
+            margin-top: 15px;
+            padding: 10px;
+            background: #edf2ff;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* 像素标注线样式 */
+        .pixel-marker {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+        
+        .marker-line {
+            background-color: rgba(255, 0, 0, 0.6);
+            position: absolute;
+        }
+        
+        .horizontal-line {
+            width: 100%;
+            height: 2px;
+        }
+        
+        .vertical-line {
+            width: 2px;
+            height: 100%;
+        }
+        
+        .coordinate-label {
+            position: absolute;
+            background-color: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 2px 6px;
+            font-size: 12px;
+            border-radius: 3px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .left-panel, .right-panel {
+                width: 100%;
+            }
+            
+            .dimension-controls {
+                flex-direction: column;
+            }
+
+            .coordinate-inputs {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .inspector-display {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .color-info {
+                text-align: center;
+            }
+
+            .help-content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>增强版离线像素画生成器</h1>
+            <p class="subtitle">上传图片，智能生成色卡，自定义编辑，生成独特的像素艺术</p>
+        </header>
+        
+        <div class="content">
+            <div class="left-panel">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h3>上传图片</h3>
+                    <p>点击或拖放图片到此处</p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                </div>
+                
+                <div class="control-group">
+                    <h2>选择色卡</h2>
+                    <div class="palette-options">
+                        <div class="palette-option active" style="background: linear-gradient(90deg, #000 0%, #333 20%, #666 40%, #999 60%, #ccc 80%, #fff 100%);" data-palette="grayscale"></div>
+                        <div class="palette-option" style="background: linear-gradient(90deg, #ff6b6b 0%, #ffa500 20%, #ffd700 40%, #90ee90 60%, #87ceeb 80%, #9370db 100%);" data-palette="rainbow"></div>
+                        <div class="palette-option" style="background: linear-gradient(90deg, #2c2c54 0%, #474787 25%, #706fd3 50%, #34ace0 75%, #33d9b2 100%);" data-palette="ocean"></div>
+                        <div class="palette-option" style="background: linear-gradient(90deg, #ff9ff3 0%, #feca57 25%, #ff9f43 50%, #ee5253 75%, #576574 100%);" data-palette="vibrant"></div>
+                        <div class="palette-option" style="background: linear-gradient(90deg, #00b894 0%, #00cec9 25%, #0984e3 50%, #6c5ce7 75%, #fd79a8 100%);" data-palette="pastel"></div>
+                        <div class="palette-option" style="background: linear-gradient(90deg, #ff0000 0%, #ffff00 20%, #00ff00 40%, #00ffff 60%, #0000ff 80%, #ff00ff 100%);" data-palette="adaptive"></div>
+                    </div>
+                    
+                    <div class="adaptive-controls" id="adaptiveControls">
+                        <label for="colorCount">颜色数量: <span id="colorCountValue">8</span></label>
+                        <input type="range" id="colorCount" min="2" max="50" value="8">
+                        <button id="generateAdaptiveBtn" style="width:100%; margin-top:10px;">生成自适应色卡</button>
+                    </div>
+                    
+                    <h2>自定义色卡</h2>
+                    <div class="custom-palette" id="customPalette">
+                        <div class="color-box add-color" id="addColor">+</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>像素设置</h2>
+                    <label for="pixelSize">像素大小: <span id="pixelSizeValue">10</span>px</label>
+                    <input type="range" id="pixelSize" min="2" max="50" value="10">
+                    
+                    <div class="dimension-controls">
+                        <div class="dimension-control">
+                            <label for="pixelWidth">像素画宽度: <span id="pixelWidthValue">64</span></label>
+                            <input type="range" id="pixelWidth" min="16" max="256" value="64">
+                        </div>
+                        <div class="dimension-control">
+                            <label for="pixelHeight">像素画高度: <span id="pixelHeightValue">64</span></label>
+                            <input type="range" id="pixelHeight" min="16" max="256" value="64">
+                        </div>
+                    </div>
+                    
+                    <div class="dimension-controls">
+                        <div class="dimension-control">
+                            <label for="customWidth">自定义宽度:</label>
+                            <input type="number" id="customWidth" min="16" max="512" value="64">
+                        </div>
+                        <div class="dimension-control">
+                            <label for="customHeight">自定义高度:</label>
+                            <input type="number" id="customHeight" min="16" max="512" value="64">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <input type="checkbox" id="lockAspectRatio" checked>
+                        <label for="lockAspectRatio">锁定宽高比</label>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="generate-btn" id="generateBtn">生成像素画</button>
+                    <button class="download-btn" id="downloadBtn" disabled>下载图片</button>
+                </div>
+
+                <!-- 配置导入导出按钮 -->
+                <div class="button-group config-buttons">
+                    <button class="export-btn" id="exportConfigBtn">导出配置</button>
+                    <button class="import-btn" id="importConfigBtn">加载配置</button>
+                </div>
+
+                <!-- 使用说明按钮 -->
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="help-btn" id="helpBtn">使用说明</button>
+                </div>
+                
+                <p class="info-text">所有处理均在您的设备上完成，图片不会上传到任何服务器</p>
+            </div>
+            
+            <div class="right-panel">
+                <div class="preview-container">
+                    <h2>预览</h2>
+                    <div class="canvas-container">
+                        <div class="canvas-label">原始图片</div>
+                        <canvas id="originalCanvas"></canvas>
+                    </div>
+                    
+                    <div class="dimension-display">
+                        <span>原始尺寸: <span id="originalDimensions">0 × 0</span></span>
+                    </div>
+                    
+                    <h2 style="margin-top: 30px;">像素画</h2>
+                    <div class="canvas-container" id="pixelCanvasContainer">
+                        <div class="canvas-label">像素画</div>
+                        <canvas id="pixelCanvas"></canvas>
+                        <!-- 像素标注线容器 -->
+                        <div class="pixel-marker" id="pixelMarker">
+                            <div class="marker-line horizontal-line" id="horizontalLine"></div>
+                            <div class="marker-line vertical-line" id="verticalLine"></div>
+                            <div class="coordinate-label" id="coordLabel"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="dimension-display">
+                        <span>像素画尺寸: <span id="pixelDimensions">0 × 0</span></span>
+                        <span>像素数: <span id="pixelCount">0</span></span>
+                    </div>
+
+                    <!-- 像素检查器 -->
+                    <div class="pixel-inspector">
+                        <div class="inspector-header">
+                            <span class="icon">🔍</span>
+                            <h2>像素检查器</h2>
+                        </div>
+                        <div class="coordinate-inputs">
+                            <div>
+                                <label for="yCoord">行号 (Y):</label>
+                                <input type="number" id="yCoord" value="0" min="0">
+                            </div>
+                            <div>
+                                <label for="xCoord">列号 (X):</label>
+                                <input type="number" id="xCoord" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="inspector-display">
+                            <div class="color-preview-box" id="inspectorColorBox"></div>
+                            <div class="color-info">
+                                <p>位置: <span id="inspectorPos">(-, -)</span></p>
+                                <p>颜色值: <span id="inspectorHex">#000000</span></p>
+                                <p>RGB: <span id="inspectorRgb">0, 0, 0</span></p>
+                            </div>
+                        </div>
+                        <div class="inspector-tip">
+                            <span>💡 点击像素画或使用方向键 ← ↑ → ↓ 快速浏览像素</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>增强版离线像素画生成器 &copy; 2023 - 完全在浏览器中运行</p>
+        </footer>
+    </div>
+
+    <!-- 颜色编辑模态框 -->
+    <div class="color-edit-modal" id="colorEditModal">
+        <div class="color-edit-content">
+            <h3>编辑颜色</h3>
+            <div class="color-preview" id="colorPreview"></div>
+            <input type="text" class="color-input" id="colorInput" placeholder="#000000">
+            <div class="color-edit-buttons">
+                <button id="saveColorBtn" style="background: #6a11cb; color: white;">保存</button>
+                <button id="cancelColorBtn" style="background: #6c757d; color: white;">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配置导入导出模态框 -->
+    <div class="config-modal" id="configModal">
+        <div class="config-content">
+            <h3 id="configModalTitle">导出配置</h3>
+            <textarea class="config-textarea" id="configTextarea" placeholder="配置将显示在这里..."></textarea>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">
+                复制此文本可保存配置，粘贴配置文本可加载
+            </p>
+            <div class="config-buttons">
+                <button id="copyConfigBtn" style="background: #6a11cb; color: white;">复制配置</button>
+                <button id="applyConfigBtn" style="background: #11998e; color: white;">应用配置</button>
+                <button id="closeConfigBtn" style="background: #6c757d; color: white;">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 使用说明模态框 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <h3>像素画生成器使用说明</h3>
+            
+            <div class="help-section">
+                <h4>一、基本操作流程</h4>
+                <ol class="help-steps">
+                    <li>点击或拖放图片到左侧"上传图片"区域</li>
+                    <li>选择或自定义色卡（颜色方案）</li>
+                    <li>调整像素大小和画布尺寸参数</li>
+                    <li>点击"生成像素画"按钮</li>
+                    <li>使用像素检查器查看和分析像素细节</li>
+                    <li>满意后点击"下载图片"保存像素画</li>
+                </ol>
+            </div>
+            
+            <div class="help-section">
+                <h4>二、主要功能说明</h4>
+                
+                <div class="help-feature">
+                    <h4>1. 图片上传</h4>
+                    <p>支持常见图片格式（JPG、PNG等），点击上传区域或直接拖放图片即可。所有处理均在本地完成，不会上传到服务器。</p>
+                </div>
+                
+                <div class="help-feature">
+                    <h4>2. 色卡选择与自定义</h4>
+                    <p>提供6种预设色卡：灰度、彩虹、海洋、鲜艳、柔和、自适应。</p>
+                    <ul class="help-steps">
+                        <li><strong>自适应色卡</strong>：会分析上传图片的颜色，生成与之匹配的色卡</li>
+                        <li><strong>自定义色卡</strong>：点击"+"添加颜色，点击颜色块可编辑或删除</li>
+                    </ul>
+                </div>
+                
+                <div class="help-feature">
+                    <h4>3. 像素设置</h4>
+                    <ul class="help-steps">
+                        <li><strong>像素大小</strong>：控制单个像素的显示尺寸（2-50px）</li>
+                        <li><strong>像素画尺寸</strong>：控制像素画的宽度和高度（像素数量）</li>
+                        <li><strong>锁定宽高比</strong>：保持与原始图片相同的宽高比例</li>
+                    </ul>
+                </div>
+                
+                <div class="help-feature">
+                    <h4>4. 像素检查器</h4>
+                    <p>用于精确查看和分析像素画中的每个像素：</p>
+                    <ul class="help-steps">
+                        <li>通过输入框直接指定要查看的像素坐标（行号Y，列号X）</li>
+                        <li>使用方向键（↑↓←→）浏览相邻像素</li>
+                        <li>点击像素画中的任意位置快速查看对应像素</li>
+                        <li>显示像素的颜色值（十六进制和RGB格式）</li>
+                        <li>红色十字线标记当前选中的像素位置</li>
+                    </ul>
+                </div>
+                
+                <div class="help-feature">
+                    <h4>5. 配置导入导出</h4>
+                    <ul class="help-steps">
+                        <li><strong>导出配置</strong>：保存当前所有设置（色卡、尺寸等）为文本格式</li>
+                        <li><strong>加载配置</strong>：导入之前保存的配置，快速还原设置</li>
+                        <li>配置可用于备份设置或分享给他人</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="help-section">
+                <h4>三、使用技巧</h4>
+                <ul class="help-steps">
+                    <li>复杂图片建议使用较多的颜色数量（16-32）以保留更多细节</li>
+                    <li>简单图形或图标适合使用较少的颜色（4-8），更有像素艺术感</li>
+                    <li>像素大小越大，单个像素越明显，适合小尺寸像素画</li>
+                    <li>使用"锁定宽高比"可避免图片变形</li>
+                    <li>创建满意的配置后导出保存，便于日后重复使用</li>
+                </ul>
+            </div>
+            
+            <div class="help-buttons">
+                <button id="closeHelpBtn" style="background: #6a11cb; color: white; flex: none; width: 200px;">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const originalCanvas = document.getElementById('originalCanvas');
+            const pixelCanvas = document.getElementById('pixelCanvas');
+            const pixelCanvasContainer = document.getElementById('pixelCanvasContainer');
+            const generateBtn = document.getElementById('generateBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const pixelSizeSlider = document.getElementById('pixelSize');
+            const pixelSizeValue = document.getElementById('pixelSizeValue');
+            const pixelWidthSlider = document.getElementById('pixelWidth');
+            const pixelWidthValue = document.getElementById('pixelWidthValue');
+            const pixelHeightSlider = document.getElementById('pixelHeight');
+            const pixelHeightValue = document.getElementById('pixelHeightValue');
+            const customWidthInput = document.getElementById('customWidth');
+            const customHeightInput = document.getElementById('customHeight');
+            const lockAspectRatio = document.getElementById('lockAspectRatio');
+            const originalDimensions = document.getElementById('originalDimensions');
+            const pixelDimensions = document.getElementById('pixelDimensions');
+            const pixelCount = document.getElementById('pixelCount');
+            const paletteOptions = document.querySelectorAll('.palette-option');
+            const customPalette = document.getElementById('customPalette');
+            const addColorBtn = document.getElementById('addColor');
+            const adaptiveControls = document.getElementById('adaptiveControls');
+            const colorCountSlider = document.getElementById('colorCount');
+            const colorCountValue = document.getElementById('colorCountValue');
+            const generateAdaptiveBtn = document.getElementById('generateAdaptiveBtn');
+            const colorEditModal = document.getElementById('colorEditModal');
+            const colorPreview = document.getElementById('colorPreview');
+            const colorInput = document.getElementById('colorInput');
+            const saveColorBtn = document.getElementById('saveColorBtn');
+            const cancelColorBtn = document.getElementById('cancelColorBtn');
+
+            // 像素检查器元素
+            const yCoordInput = document.getElementById('yCoord');
+            const xCoordInput = document.getElementById('xCoord');
+            const inspectorColorBox = document.getElementById('inspectorColorBox');
+            const inspectorPos = document.getElementById('inspectorPos');
+            const inspectorHex = document.getElementById('inspectorHex');
+            const inspectorRgb = document.getElementById('inspectorRgb');
+
+            // 像素标注线元素
+            const pixelMarker = document.getElementById('pixelMarker');
+            const horizontalLine = document.getElementById('horizontalLine');
+            const verticalLine = document.getElementById('verticalLine');
+            const coordLabel = document.getElementById('coordLabel');
+
+            // 配置导入导出元素
+            const exportConfigBtn = document.getElementById('exportConfigBtn');
+            const importConfigBtn = document.getElementById('importConfigBtn');
+            const configModal = document.getElementById('configModal');
+            const configModalTitle = document.getElementById('configModalTitle');
+            const configTextarea = document.getElementById('configTextarea');
+            const copyConfigBtn = document.getElementById('copyConfigBtn');
+            const applyConfigBtn = document.getElementById('applyConfigBtn');
+            const closeConfigBtn = document.getElementById('closeConfigBtn');
+
+            // 使用说明元素
+            const helpBtn = document.getElementById('helpBtn');
+            const helpModal = document.getElementById('helpModal');
+            const closeHelpBtn = document.getElementById('closeHelpBtn');
+            
+            let originalImage = null;
+            let currentPalette = [];
+            let aspectRatio = 1;
+            let editingColorIndex = -1;
+            let pixelSize = 10; // 用于像素检查器的像素大小
+            let pixelWidth = 64; // 用于像素检查器的像素宽度
+            let pixelHeight = 64; // 用于像素检查器的像素高度
+            let canvasRect = null; // 像素画容器的位置信息
+            
+            // 初始化预设色卡
+            const palettes = {
+                grayscale: ['#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff'],
+                rainbow: ['#ff6b6b', '#ffa500', '#ffd700', '#90ee90', '#87ceeb', '#9370db'],
+                ocean: ['#2c2c54', '#474787', '#706fd3', '#34ace0', '#33d9b2'],
+                vibrant: ['#ff9ff3', '#feca57', '#ff9f43', '#ee5253', '#576574'],
+                pastel: ['#00b894', '#00cec9', '#0984e3', '#6c5ce7', '#fd79a8'],
+                adaptive: [] // 自适应色卡初始为空
+            };
+            
+            // 设置默认色卡
+            setPalette('grayscale');
+            
+            // 事件监听器
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.background = '#f0f0ff';
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.background = '#f9f9ff';
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.background = '#f9f9ff';
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleImageUpload();
+                }
+            });
+            
+            fileInput.addEventListener('change', handleImageUpload);
+            generateBtn.addEventListener('click', generatePixelArt);
+            downloadBtn.addEventListener('click', downloadPixelArt);
+            
+            pixelSizeSlider.addEventListener('input', () => {
+                pixelSizeValue.textContent = pixelSizeSlider.value;
+                pixelSize = parseInt(pixelSizeSlider.value);
+                updatePixelDimensions();
+            });
+            
+            pixelWidthSlider.addEventListener('input', () => {
+                pixelWidthValue.textContent = pixelWidthSlider.value;
+                customWidthInput.value = pixelWidthSlider.value;
+                pixelWidth = parseInt(pixelWidthSlider.value);
+                
+                if (lockAspectRatio.checked && originalImage) {
+                    const newHeight = Math.round(pixelWidth / aspectRatio);
+                    pixelHeightSlider.value = newHeight;
+                    pixelHeightValue.textContent = newHeight;
+                    customHeightInput.value = newHeight;
+                    pixelHeight = newHeight;
+                }
+                
+                updatePixelDimensions();
+                updateInspectorInputRanges();
+            });
+            
+            pixelHeightSlider.addEventListener('input', () => {
+                pixelHeightValue.textContent = pixelHeightSlider.value;
+                customHeightInput.value = pixelHeightSlider.value;
+                pixelHeight = parseInt(pixelHeightSlider.value);
+                
+                if (lockAspectRatio.checked && originalImage) {
+                    const newWidth = Math.round(pixelHeight * aspectRatio);
+                    pixelWidthSlider.value = newWidth;
+                    pixelWidthValue.textContent = newWidth;
+                    customWidthInput.value = newWidth;
+                    pixelWidth = newWidth;
+                }
+                
+                updatePixelDimensions();
+                updateInspectorInputRanges();
+            });
+            
+            customWidthInput.addEventListener('input', () => {
+                const value = Math.min(512, Math.max(16, parseInt(customWidthInput.value) || 64));
+                customWidthInput.value = value;
+                pixelWidthSlider.value = value;
+                pixelWidthValue.textContent = value;
+                pixelWidth = value;
+                
+                if (lockAspectRatio.checked && originalImage) {
+                    const newHeight = Math.round(value / aspectRatio);
+                    pixelHeightSlider.value = newHeight;
+                    pixelHeightValue.textContent = newHeight;
+                    customHeightInput.value = newHeight;
+                    pixelHeight = newHeight;
+                }
+                
+                updatePixelDimensions();
+                updateInspectorInputRanges();
+            });
+            
+            customHeightInput.addEventListener('input', () => {
+                const value = Math.min(512, Math.max(16, parseInt(customHeightInput.value) || 64));
+                customHeightInput.value = value;
+                pixelHeightSlider.value = value;
+                pixelHeightValue.textContent = value;
+                pixelHeight = value;
+                
+                if (lockAspectRatio.checked && originalImage) {
+                    const newWidth = Math.round(value * aspectRatio);
+                    pixelWidthSlider.value = newWidth;
+                    pixelWidthValue.textContent = newWidth;
+                    customWidthInput.value = newWidth;
+                    pixelWidth = newWidth;
+                }
+                
+                updatePixelDimensions();
+                updateInspectorInputRanges();
+            });
+            
+            colorCountSlider.addEventListener('input', () => {
+                colorCountValue.textContent = colorCountSlider.value;
+            });
+            
+            generateAdaptiveBtn.addEventListener('click', generateAdaptivePalette);
+            
+            // 色卡选择
+            paletteOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    paletteOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    if (this.dataset.palette === 'adaptive') {
+                        adaptiveControls.classList.add('active');
+                    } else {
+                        adaptiveControls.classList.remove('active');
+                        setPalette(this.dataset.palette);
+                    }
+                });
+            });
+            
+            // 添加自定义颜色
+            addColorBtn.addEventListener('click', function() {
+                const color = prompt('请输入颜色值（十六进制，例如 #ff0000）:');
+                if (color && /^#[0-9A-F]{6}$/i.test(color)) {
+                    addCustomColor(color);
+                } else if (color) {
+                    alert('请输入有效的十六进制颜色值，例如 #ff0000');
+                }
+            });
+            
+            // 颜色编辑事件
+            saveColorBtn.addEventListener('click', function() {
+                if (editingColorIndex >= 0) {
+                    const newColor = colorInput.value;
+                    if (/^#[0-9A-F]{6}$/i.test(newColor)) {
+                        currentPalette[editingColorIndex] = newColor;
+                        updateCustomPaletteDisplay();
+                        colorEditModal.classList.remove('active');
+                    } else {
+                        alert('请输入有效的十六进制颜色值，例如 #ff0000');
+                    }
+                }
+            });
+            
+            cancelColorBtn.addEventListener('click', function() {
+                colorEditModal.classList.remove('active');
+            });
+
+            // 像素检查器坐标输入事件
+            yCoordInput.addEventListener('input', updateInspectorDisplay);
+            xCoordInput.addEventListener('input', updateInspectorDisplay);
+
+            // 方向键事件
+            document.addEventListener('keydown', function(e) {
+                // 只有在输入框未被聚焦时才响应方向键
+                if (document.activeElement !== yCoordInput && document.activeElement !== xCoordInput) {
+                    let y = parseInt(yCoordInput.value);
+                    let x = parseInt(xCoordInput.value);
+
+                    switch(e.key) {
+                        case 'ArrowUp':
+                            y = Math.max(0, y - 1);
+                            break;
+                        case 'ArrowDown':
+                            y = Math.min(pixelHeight - 1, y + 1);
+                            break;
+                        case 'ArrowLeft':
+                            x = Math.max(0, x - 1);
+                            break;
+                        case 'ArrowRight':
+                            x = Math.min(pixelWidth - 1, x + 1);
+                            break;
+                        default:
+                            return;
+                    }
+
+                    yCoordInput.value = y;
+                    xCoordInput.value = x;
+                    updateInspectorDisplay();
+                    e.preventDefault();
+                }
+            });
+
+            // 点击像素画选择像素
+            pixelCanvas.addEventListener('click', function(e) {
+                if (!canvasRect) {
+                    canvasRect = pixelCanvasContainer.getBoundingClientRect();
+                }
+                
+                // 计算点击位置相对于画布的坐标
+                const rect = pixelCanvas.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                
+                // 计算对应的像素坐标
+                const pixelX = Math.floor(clickX / pixelSize);
+                const pixelY = Math.floor(clickY / pixelSize);
+                
+                // 更新输入框并刷新显示
+                xCoordInput.value = pixelX;
+                yCoordInput.value = pixelY;
+                updateInspectorDisplay();
+            });
+
+            // 窗口大小改变时重新计算标注线位置
+            window.addEventListener('resize', function() {
+                canvasRect = null; // 重置位置信息
+                if (pixelCanvas.width > 0 && pixelCanvas.height > 0) {
+                    updateInspectorDisplay();
+                }
+            });
+
+            // 配置导入导出事件
+            exportConfigBtn.addEventListener('click', function() {
+                const config = exportConfig();
+                configModalTitle.textContent = '导出配置';
+                configTextarea.value = JSON.stringify(config, null, 2);
+                configModal.classList.add('active');
+            });
+
+            importConfigBtn.addEventListener('click', function() {
+                configModalTitle.textContent = '加载配置';
+                configTextarea.value = '';
+                configModal.classList.add('active');
+            });
+
+            copyConfigBtn.addEventListener('click', function() {
+                configTextarea.select();
+                document.execCommand('copy');
+                alert('配置已复制到剪贴板');
+            });
+
+            applyConfigBtn.addEventListener('click', function() {
+                try {
+                    const config = JSON.parse(configTextarea.value);
+                    loadConfig(config);
+                    configModal.classList.remove('active');
+                    alert('配置加载成功');
+                } catch (e) {
+                    alert('配置格式错误，请检查输入');
+                    console.error('配置加载错误:', e);
+                }
+            });
+
+            closeConfigBtn.addEventListener('click', function() {
+                configModal.classList.remove('active');
+            });
+
+            // 使用说明事件
+            helpBtn.addEventListener('click', function() {
+                helpModal.classList.add('active');
+            });
+
+            closeHelpBtn.addEventListener('click', function() {
+                helpModal.classList.remove('active');
+            });
+            
+            // 处理图片上传
+            function handleImageUpload() {
+                if (!fileInput.files.length) return;
+                
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    originalImage = new Image();
+                    originalImage.onload = function() {
+                        displayOriginalImage();
+                        generateBtn.disabled = false;
+                        
+                        // 计算宽高比
+                        aspectRatio = originalImage.width / originalImage.height;
+                        
+                        // 设置默认像素画尺寸，保持宽高比
+                        const baseSize = 64;
+                        let width, height;
+                        
+                        if (originalImage.width > originalImage.height) {
+                            width = baseSize;
+                            height = Math.round(baseSize / aspectRatio);
+                        } else {
+                            height = baseSize;
+                            width = Math.round(baseSize * aspectRatio);
+                        }
+                        
+                        // 更新UI
+                        pixelWidthSlider.value = width;
+                        pixelWidthValue.textContent = width;
+                        customWidthInput.value = width;
+                        pixelWidth = width;
+                        
+                        pixelHeightSlider.value = height;
+                        pixelHeightValue.textContent = height;
+                        customHeightInput.value = height;
+                        pixelHeight = height;
+                        
+                        updatePixelDimensions();
+                        updateInspectorInputRanges();
+                        
+                        // 如果当前是自适应模式，生成自适应色卡
+                        const activePalette = document.querySelector('.palette-option.active').dataset.palette;
+                        if (activePalette === 'adaptive') {
+                            generateAdaptivePalette();
+                        }
+                    };
+                    originalImage.src = e.target.result;
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            // 显示原始图片
+            function displayOriginalImage() {
+                const ctx = originalCanvas.getContext('2d');
+                
+                // 设置画布尺寸
+                const maxWidth = 500;
+                const ratio = Math.min(maxWidth / originalImage.width, 1);
+                originalCanvas.width = originalImage.width * ratio;
+                originalCanvas.height = originalImage.height * ratio;
+                
+                // 绘制图片
+                ctx.drawImage(originalImage, 0, 0, originalCanvas.width, originalCanvas.height);
+                
+                // 更新尺寸显示
+                originalDimensions.textContent = `${originalImage.width} × ${originalImage.height}`;
+            }
+            
+            // 更新像素画尺寸显示
+            function updatePixelDimensions() {
+                const width = pixelWidth;
+                const height = pixelHeight;
+                const size = pixelSize;
+                
+                pixelDimensions.textContent = `${width} × ${height}`;
+                pixelCount.textContent = width * height;
+            }
+
+            // 更新像素检查器输入范围
+            function updateInspectorInputRanges() {
+                yCoordInput.max = pixelHeight - 1;
+                xCoordInput.max = pixelWidth - 1;
+            }
+            
+            // 设置色卡
+            function setPalette(paletteName) {
+                currentPalette = [...palettes[paletteName]];
+                updateCustomPaletteDisplay();
+            }
+            
+            // 添加自定义颜色
+            function addCustomColor(color) {
+                currentPalette.push(color);
+                updateCustomPaletteDisplay();
+            }
+            
+            // 更新自定义色卡显示
+            function updateCustomPaletteDisplay() {
+                // 清空自定义色卡显示区域（保留添加按钮）
+                while (customPalette.firstChild) {
+                    customPalette.removeChild(customPalette.firstChild);
+                }
+                
+                // 添加颜色方块
+                currentPalette.forEach((color, index) => {
+                    const colorBox = document.createElement('div');
+                    colorBox.className = 'color-box';
+                    colorBox.style.backgroundColor = color;
+                    colorBox.dataset.index = index;
+                    
+                    // 添加颜色值提示
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'color-tooltip';
+                    tooltip.textContent = color;
+                    colorBox.appendChild(tooltip);
+                    
+                    // 添加删除按钮
+                    const deleteBtn = document.createElement('div');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = '×';
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        currentPalette.splice(index, 1);
+                        updateCustomPaletteDisplay();
+                    });
+                    colorBox.appendChild(deleteBtn);
+                    
+                    // 添加点击编辑事件
+                    colorBox.addEventListener('click', function() {
+                        editingColorIndex = index;
+                        colorPreview.style.backgroundColor = color;
+                        colorInput.value = color;
+                        colorEditModal.classList.add('active');
+                    });
+                    
+                    customPalette.appendChild(colorBox);
+                });
+                
+                // 添加添加按钮
+                const addBtn = document.createElement('div');
+                addBtn.className = 'color-box add-color';
+                addBtn.id = 'addColor';
+                addBtn.textContent = '+';
+                addBtn.addEventListener('click', function() {
+                    const color = prompt('请输入颜色值（十六进制，例如 #ff0000）:');
+                    if (color && /^#[0-9A-F]{6}$/i.test(color)) {
+                        addCustomColor(color);
+                    } else if (color) {
+                        alert('请输入有效的十六进制颜色值，例如 #ff0000');
+                    }
+                });
+                
+                customPalette.appendChild(addBtn);
+            }
+            
+            // 生成自适应色卡
+            function generateAdaptivePalette() {
+                if (!originalImage) {
+                    alert('请先上传图片');
+                    return;
+                }
+                
+                const colorCount = parseInt(colorCountSlider.value);
+                
+                // 创建临时canvas来分析图片颜色
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = originalImage.width;
+                tempCanvas.height = originalImage.height;
+                tempCtx.drawImage(originalImage, 0, 0);
+                
+                // 获取图片数据
+                const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                const data = imageData.data;
+                
+                // 采样像素点
+                const samples = [];
+                const step = Math.max(1, Math.floor((tempCanvas.width * tempCanvas.height) / 1000));
+                
+                for (let i = 0; i < data.length; i += 4 * step) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    
+                    // 跳过接近透明的像素
+                    if (data[i + 3] < 128) continue;
+                    
+                    samples.push([r, g, b]);
+                }
+                
+                // 使用K-means算法聚类颜色
+                const clusters = kMeansClustering(samples, colorCount);
+                
+                // 将聚类中心转换为十六进制颜色
+                currentPalette = clusters.map(cluster => {
+                    const [r, g, b] = cluster.center;
+                    return rgbToHex(Math.round(r), Math.round(g), Math.round(b));
+                });
+                
+                // 更新色卡显示
+                updateCustomPaletteDisplay();
+                
+                // 将自适应色卡保存到预设中
+                palettes.adaptive = [...currentPalette];
+            }
+            
+            // K-means聚类算法
+            function kMeansClustering(data, k, maxIterations = 10) {
+                // 随机选择初始中心点
+                let centers = [];
+                for (let i = 0; i < k; i++) {
+                    const randomIndex = Math.floor(Math.random() * data.length);
+                    centers.push({
+                        center: [...data[randomIndex]],
+                        points: []
+                    });
+                }
+                
+                // 迭代聚类
+                for (let iter = 0; iter < maxIterations; iter++) {
+                    // 清空每个簇的点
+                    centers.forEach(center => center.points = []);
+                    
+                    // 将每个点分配到最近的簇
+                    data.forEach(point => {
+                        let minDistance = Infinity;
+                        let closestCenterIndex = 0;
+                        
+                        centers.forEach((center, index) => {
+                            const distance = colorDistance(point, center.center);
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                closestCenterIndex = index;
+                            }
+                        });
+                        
+                        centers[closestCenterIndex].points.push(point);
+                    });
+                    
+                    // 重新计算每个簇的中心
+                    let centersChanged = false;
+                    centers.forEach(center => {
+                        if (center.points.length === 0) return;
+                        
+                        const newCenter = [0, 0, 0];
+                        center.points.forEach(point => {
+                            newCenter[0] += point[0];
+                            newCenter[1] += point[1];
+                            newCenter[2] += point[2];
+                        });
+                        
+                        newCenter[0] /= center.points.length;
+                        newCenter[1] /= center.points.length;
+                        newCenter[2] /= center.points.length;
+                        
+                        // 检查中心是否发生变化
+                        if (colorDistance(newCenter, center.center) > 1) {
+                            centersChanged = true;
+                        }
+                        
+                        center.center = newCenter;
+                    });
+                    
+                    // 如果中心没有变化，提前结束
+                    if (!centersChanged) break;
+                }
+                
+                return centers;
+            }
+            
+            // 计算颜色距离
+            function colorDistance(color1, color2) {
+                const [r1, g1, b1] = color1;
+                const [r2, g2, b2] = color2;
+                
+                return Math.sqrt(
+                    Math.pow(r1 - r2, 2) +
+                    Math.pow(g1 - g2, 2) +
+                    Math.pow(b1 - b2, 2)
+                );
+            }
+            
+            // RGB转十六进制
+            function rgbToHex(r, g, b) {
+                return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            }
+            
+            // 生成像素画
+            function generatePixelArt() {
+                if (!originalImage) return;
+                
+                pixelSize = parseInt(pixelSizeSlider.value);
+                pixelWidth = parseInt(pixelWidthSlider.value);
+                pixelHeight = parseInt(pixelHeightSlider.value);
+                
+                // 设置像素画布尺寸
+                pixelCanvas.width = pixelWidth * pixelSize;
+                pixelCanvas.height = pixelHeight * pixelSize;
+                
+                const ctx = pixelCanvas.getContext('2d');
+                const originalCtx = originalCanvas.getContext('2d');
+                
+                // 获取原始图片数据（缩小后的）
+                const imageData = originalCtx.getImageData(0, 0, originalCanvas.width, originalCanvas.height);
+                const data = imageData.data;
+                
+                // 清空画布
+                ctx.clearRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+                
+                // 生成像素画
+                for (let y = 0; y < pixelHeight; y++) {
+                    for (let x = 0; x < pixelWidth; x++) {
+                        // 计算在原始图片中的对应位置
+                        const origX = Math.floor((x / pixelWidth) * originalCanvas.width);
+                        const origY = Math.floor((y / pixelHeight) * originalCanvas.height);
+                        
+                        // 获取原始颜色
+                        const pixelIndex = (origY * originalCanvas.width + origX) * 4;
+                        const r = data[pixelIndex];
+                        const g = data[pixelIndex + 1];
+                        const b = data[pixelIndex + 2];
+                        
+                        // 找到最接近的色卡颜色
+                        const closestColor = findClosestColor(r, g, b);
+                        
+                        // 绘制像素
+                        ctx.fillStyle = closestColor;
+                        ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+                
+                downloadBtn.disabled = false;
+                updatePixelDimensions();
+                updateInspectorInputRanges();
+                canvasRect = null; // 重置位置信息
+                updateInspectorDisplay(); // 生成后更新检查器显示
+            }
+            
+            // 找到最接近的颜色
+            function findClosestColor(r, g, b) {
+                let minDistance = Infinity;
+                let closestColor = '#000000';
+                
+                for (const color of currentPalette) {
+                    // 将十六进制颜色转换为RGB
+                    const hex = color.replace('#', '');
+                    const colorR = parseInt(hex.substring(0, 2), 16);
+                    const colorG = parseInt(hex.substring(2, 4), 16);
+                    const colorB = parseInt(hex.substring(4, 6), 16);
+                    
+                    // 计算颜色距离（使用欧几里得距离）
+                    const distance = Math.sqrt(
+                        Math.pow(r - colorR, 2) + 
+                        Math.pow(g - colorG, 2) + 
+                        Math.pow(b - colorB, 2)
+                    );
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestColor = color;
+                    }
+                }
+                
+                return closestColor;
+            }
+
+            // 更新像素检查器显示和标注线
+            function updateInspectorDisplay() {
+                const y = parseInt(yCoordInput.value);
+                const x = parseInt(xCoordInput.value);
+
+                // 边界检查
+                const clampedY = Math.max(0, Math.min(pixelHeight - 1, y));
+                const clampedX = Math.max(0, Math.min(pixelWidth - 1, x));
+
+                if (clampedY !== y || clampedX !== x) {
+                    yCoordInput.value = clampedY;
+                    xCoordInput.value = clampedX;
+                }
+
+                const ctx = pixelCanvas.getContext('2d');
+                if (!ctx || pixelCanvas.width === 0 || pixelCanvas.height === 0) return;
+
+                // 获取像素数据
+                const pixelData = ctx.getImageData(clampedX * pixelSize, clampedY * pixelSize, 1, 1).data;
+                const r = pixelData[0];
+                const g = pixelData[1];
+                const b = pixelData[2];
+                const hex = rgbToHex(r, g, b);
+
+                // 更新检查器显示
+                inspectorColorBox.style.backgroundColor = hex;
+                inspectorPos.textContent = `(${clampedX}, ${clampedY})`;
+                inspectorHex.textContent = hex;
+                inspectorRgb.textContent = `${r}, ${g}, ${b}`;
+                
+                // 更新标注线位置
+                updateMarkerPosition(clampedX, clampedY);
+            }
+
+            // 更新标注线位置
+            function updateMarkerPosition(x, y) {
+                if (!canvasRect) {
+                    canvasRect = pixelCanvasContainer.getBoundingClientRect();
+                }
+                
+                // 计算像素在画布上的实际位置（考虑像素大小）
+                const pixelX = x * pixelSize;
+                const pixelY = y * pixelSize;
+                
+                // 设置水平线位置（在像素中心）
+                horizontalLine.style.top = `${pixelY + pixelSize/2}px`;
+                
+                // 设置垂直线位置（在像素中心）
+                verticalLine.style.left = `${pixelX + pixelSize/2}px`;
+                
+                // 设置坐标标签位置（稍微偏移避免遮挡）
+                let labelX = pixelX + pixelSize/2 + 5;
+                let labelY = pixelY + pixelSize/2 + 5;
+                
+                // 确保标签不会超出画布
+                if (labelX + 80 > pixelCanvas.width) {
+                    labelX = pixelX + pixelSize/2 - 85;
+                }
+                if (labelY + 20 > pixelCanvas.height) {
+                    labelY = pixelY + pixelSize/2 - 25;
+                }
+                
+                coordLabel.style.left = `${labelX}px`;
+                coordLabel.style.top = `${labelY}px`;
+                coordLabel.textContent = `X: ${x}, Y: ${y}`;
+                
+                // 显示标注线
+                pixelMarker.style.display = 'block';
+            }
+            
+            // 下载像素画
+            function downloadPixelArt() {
+                const link = document.createElement('a');
+                link.download = 'pixel-art.png';
+                link.href = pixelCanvas.toDataURL('image/png');
+                link.click();
+            }
+
+            // 导出配置
+            function exportConfig() {
+                // 获取当前激活的色板
+                let activePalette = 'custom';
+                paletteOptions.forEach(option => {
+                    if (option.classList.contains('active')) {
+                        activePalette = option.dataset.palette;
+                    }
+                });
+
+                // 收集所有配置参数
+                return {
+                    version: "1.0",
+                    timestamp: new Date().toISOString(),
+                    pixelSize: parseInt(pixelSizeSlider.value),
+                    pixelWidth: parseInt(pixelWidthSlider.value),
+                    pixelHeight: parseInt(pixelHeightSlider.value),
+                    lockAspectRatio: lockAspectRatio.checked,
+                    colorCount: parseInt(colorCountSlider.value),
+                    activePalette: activePalette,
+                    customPalette: [...currentPalette],
+                    selectedPixel: {
+                        x: parseInt(xCoordInput.value),
+                        y: parseInt(yCoordInput.value)
+                    }
+                };
+            }
+
+            // 加载配置
+            function loadConfig(config) {
+                // 基本验证
+                if (!config || !config.version) {
+                    throw new Error('无效的配置数据');
+                }
+
+                // 还原像素大小设置
+                if (config.pixelSize) {
+                    pixelSizeSlider.value = config.pixelSize;
+                    pixelSizeValue.textContent = config.pixelSize;
+                    pixelSize = config.pixelSize;
+                }
+
+                // 还原尺寸设置
+                if (config.pixelWidth) {
+                    pixelWidthSlider.value = config.pixelWidth;
+                    pixelWidthValue.textContent = config.pixelWidth;
+                    customWidthInput.value = config.pixelWidth;
+                    pixelWidth = config.pixelWidth;
+                }
+
+                if (config.pixelHeight) {
+                    pixelHeightSlider.value = config.pixelHeight;
+                    pixelHeightValue.textContent = config.pixelHeight;
+                    customHeightInput.value = config.pixelHeight;
+                    pixelHeight = config.pixelHeight;
+                }
+
+                // 还原宽高比锁定状态
+                if (config.lockAspectRatio !== undefined) {
+                    lockAspectRatio.checked = config.lockAspectRatio;
+                }
+
+                // 还原颜色数量
+                if (config.colorCount) {
+                    colorCountSlider.value = config.colorCount;
+                    colorCountValue.textContent = config.colorCount;
+                }
+
+                // 还原色板选择
+                if (config.activePalette) {
+                    paletteOptions.forEach(option => {
+                        if (option.dataset.palette === config.activePalette) {
+                            option.click(); // 触发点击事件来激活色板
+                        }
+                    });
+                }
+
+                // 还原自定义色板
+                if (config.customPalette && Array.isArray(config.customPalette)) {
+                    currentPalette = [...config.customPalette];
+                    updateCustomPaletteDisplay();
+                }
+
+                // 还原选中的像素
+                if (config.selectedPixel) {
+                    xCoordInput.value = config.selectedPixel.x || 0;
+                    yCoordInput.value = config.selectedPixel.y || 0;
+                }
+
+                // 更新相关显示
+                updatePixelDimensions();
+                updateInspectorInputRanges();
+                updateInspectorDisplay();
+
+                // 如果有原始图片，重新生成像素画
+                if (originalImage) {
+                    generatePixelArt();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
