@@ -569,10 +569,84 @@
             background-color: rgba(255, 0, 0, 0.9);
             color: white;
             padding: 2px 6px;
-            font-size: 12px;
+            font-size: 11px;
             border-radius: 3px;
             font-weight: bold;
             white-space: nowrap;
+            min-width: 80px;
+            line-height: 1.3;
+        }
+
+        /* 颜色统计样式 */
+        .color-statistics {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-header .icon {
+            font-size: 1.5rem;
+            color: #6a11cb;
+            margin-right: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid transparent;
+        }
+
+        .stat-color-box {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .stat-color-box:hover {
+            transform: scale(1.1);
+        }
+
+        .stat-info {
+            flex: 1;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .stat-numbers {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .stat-percentage {
+            font-size: 0.85rem;
+            color: #999;
+            margin-left: 10px;
+        }
+
+        .no-stats {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-size: 0.9rem;
         }
 
         @media (max-width: 768px) {
@@ -683,6 +757,15 @@
                 <div class="button-group">
                     <button class="generate-btn" id="generateBtn">生成像素画</button>
                     <button class="download-btn" id="downloadBtn" disabled>下载图片</button>
+                </div>
+
+                <!-- 颜色统计 -->
+                <div class="color-statistics" id="colorStatistics" style="display: none;">
+                    <div class="stat-header">
+                        <span class="icon">📊</span>
+                        <h2>颜色统计</h2>
+                    </div>
+                    <div id="statisticsContent"></div>
                 </div>
 
                 <!-- 配置导入导出按钮 -->
@@ -824,7 +907,8 @@
                     <p>提供6种预设色卡：灰度、彩虹、海洋、鲜艳、柔和、自适应。</p>
                     <ul class="help-steps">
                         <li><strong>自适应色卡</strong>：会分析上传图片的颜色，生成与之匹配的色卡</li>
-                        <li><strong>自定义色卡</strong>：点击"+"添加颜色，点击颜色块可编辑或删除</li>
+                        <li><strong>自定义色卡</strong>：点击"+"添加颜色</li>
+                        <li>色卡中颜色：单击高亮显示（生成像素画后），双击编辑，点击"×"删除</li>
                     </ul>
                 </div>
                 
@@ -845,12 +929,23 @@
                         <li>使用方向键（↑↓←→）浏览相邻像素</li>
                         <li>点击像素画中的任意位置快速查看对应像素</li>
                         <li>显示像素的颜色值（十六进制和RGB格式）</li>
-                        <li>红色十字线标记当前选中的像素位置</li>
+                        <li>红色十字线标记当前选中的像素位置，显示坐标、颜色值和编号</li>
                     </ul>
                 </div>
-                
+
                 <div class="help-feature">
-                    <h4>5. 配置导入导出</h4>
+                    <h4>5. 颜色统计</h4>
+                    <ul class="help-steps">
+                        <li>自动统计每种颜色在像素画中的使用数量和频次</li>
+                        <li>按使用频次从高到低排序显示</li>
+                        <li>显示颜色的编号、使用次数和百分比</li>
+                        <li>点击统计中的颜色可高亮显示该颜色在像素画中的位置</li>
+                        <li>高亮效果持续5秒后自动恢复</li>
+                    </ul>
+                </div>
+
+                <div class="help-feature">
+                    <h4>6. 配置导入导出</h4>
                     <ul class="help-steps">
                         <li><strong>导出配置</strong>：保存当前所有设置（色卡、尺寸等）为文本格式</li>
                         <li><strong>加载配置</strong>：导入之前保存的配置，快速还原设置</li>
@@ -867,6 +962,8 @@
                     <li>像素大小越大，单个像素越明显，适合小尺寸像素画</li>
                     <li>使用"锁定宽高比"可避免图片变形</li>
                     <li>创建满意的配置后导出保存，便于日后重复使用</li>
+                    <li>利用颜色统计功能了解每种颜色的使用情况，优化色卡选择</li>
+                    <li>点击颜色统计中的颜色可快速查看该颜色在像素画中的分布</li>
                 </ul>
             </div>
             
@@ -939,6 +1036,10 @@
             const helpBtn = document.getElementById('helpBtn');
             const helpModal = document.getElementById('helpModal');
             const closeHelpBtn = document.getElementById('closeHelpBtn');
+
+            // 颜色统计元素
+            const colorStatistics = document.getElementById('colorStatistics');
+            const statisticsContent = document.getElementById('statisticsContent');
             
             let originalImage = null;
             let currentPalette = [];
@@ -947,7 +1048,9 @@
             let pixelSize = 10; // 用于像素检查器的像素大小
             let pixelWidth = 64; // 用于像素检查器的像素宽度
             let pixelHeight = 64; // 用于像素检查器的像素高度
-            let canvasRect = null; // 像素画容器的位置信息
+            let pixelData = null; // 存储像素画每个像素的颜色索引
+            let colorStats = {}; // 存储颜色统计信息
+            let highlightTimeout = null; // 高亮定时器
             
             // 初始化预设色卡
             const palettes = {
@@ -1148,18 +1251,16 @@
 
             // 点击像素画选择像素
             pixelCanvas.addEventListener('click', function(e) {
-                if (!canvasRect) {
-                    canvasRect = pixelCanvasContainer.getBoundingClientRect();
-                }
-                
                 // 计算点击位置相对于画布的坐标
                 const rect = pixelCanvas.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const clickY = e.clientY - rect.top;
                 
-                // 计算对应的像素坐标
-                const pixelX = Math.floor(clickX / pixelSize);
-                const pixelY = Math.floor(clickY / pixelSize);
+                // 计算对应的像素坐标（考虑CSS缩放）
+                const scaleX = rect.width / pixelCanvas.width;
+                const scaleY = rect.height / pixelCanvas.height;
+                const pixelX = Math.floor(clickX / (pixelSize * scaleX));
+                const pixelY = Math.floor(clickY / (pixelSize * scaleY));
                 
                 // 更新输入框并刷新显示
                 xCoordInput.value = pixelX;
@@ -1169,7 +1270,6 @@
 
             // 窗口大小改变时重新计算标注线位置
             window.addEventListener('resize', function() {
-                canvasRect = null; // 重置位置信息
                 if (pixelCanvas.width > 0 && pixelCanvas.height > 0) {
                     updateInspectorDisplay();
                 }
@@ -1350,12 +1450,28 @@
                     });
                     colorBox.appendChild(deleteBtn);
                     
-                    // 添加点击编辑事件
-                    colorBox.addEventListener('click', function() {
-                        editingColorIndex = index;
-                        colorPreview.style.backgroundColor = color;
-                        colorInput.value = color;
-                        colorEditModal.classList.add('active');
+                    // 添加点击事件（双击编辑，单击高亮）
+                    let clickTimer = null;
+                    colorBox.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('delete-btn')) return;
+                        
+                        if (clickTimer === null) {
+                            clickTimer = setTimeout(() => {
+                                // 单击：高亮显示
+                                if (pixelData && colorStats[color]) {
+                                    highlightColor(color);
+                                }
+                                clickTimer = null;
+                            }, 300);
+                        } else {
+                            clearTimeout(clickTimer);
+                            clickTimer = null;
+                            // 双击：编辑颜色
+                            editingColorIndex = index;
+                            colorPreview.style.backgroundColor = color;
+                            colorInput.value = color;
+                            colorEditModal.classList.add('active');
+                        }
                     });
                     
                     customPalette.appendChild(colorBox);
@@ -1532,8 +1648,14 @@
                 // 清空画布
                 ctx.clearRect(0, 0, pixelCanvas.width, pixelCanvas.height);
                 
+                // 初始化像素数据存储和统计
+                pixelData = [];
+                colorStats = {};
+                const totalPixels = pixelWidth * pixelHeight;
+                
                 // 生成像素画
                 for (let y = 0; y < pixelHeight; y++) {
+                    pixelData[y] = [];
                     for (let x = 0; x < pixelWidth; x++) {
                         // 计算在原始图片中的对应位置
                         const origX = Math.floor((x / pixelWidth) * originalCanvas.width);
@@ -1551,14 +1673,23 @@
                         // 绘制像素
                         ctx.fillStyle = closestColor;
                         ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                        
+                        // 存储像素数据
+                        pixelData[y][x] = closestColor;
+                        
+                        // 统计颜色使用次数
+                        if (!colorStats[closestColor]) {
+                            colorStats[closestColor] = 0;
+                        }
+                        colorStats[closestColor]++;
                     }
                 }
                 
                 downloadBtn.disabled = false;
                 updatePixelDimensions();
                 updateInspectorInputRanges();
-                canvasRect = null; // 重置位置信息
                 updateInspectorDisplay(); // 生成后更新检查器显示
+                updateColorStatistics(); // 更新颜色统计
             }
             
             // 找到最接近的颜色
@@ -1613,47 +1744,63 @@
                 const b = pixelData[2];
                 const hex = rgbToHex(r, g, b);
 
+                // 获取颜色编号
+                const colorIndex = currentPalette.indexOf(hex);
+
                 // 更新检查器显示
                 inspectorColorBox.style.backgroundColor = hex;
                 inspectorPos.textContent = `(${clampedX}, ${clampedY})`;
                 inspectorHex.textContent = hex;
                 inspectorRgb.textContent = `${r}, ${g}, ${b}`;
                 
-                // 更新标注线位置
-                updateMarkerPosition(clampedX, clampedY);
+                // 更新标注线位置（包含增强信息）
+                updateMarkerPosition(clampedX, clampedY, hex, colorIndex);
             }
 
-            // 更新标注线位置
-            function updateMarkerPosition(x, y) {
-                if (!canvasRect) {
-                    canvasRect = pixelCanvasContainer.getBoundingClientRect();
-                }
+            // 更新标注线位置（增强版）
+            function updateMarkerPosition(x, y, hex = null, colorIndex = -1) {
+                // 获取画布的实际尺寸和显示尺寸
+                const canvasRect = pixelCanvas.getBoundingClientRect();
+                const canvasWidth = pixelCanvas.width;
+                const canvasHeight = pixelCanvas.height;
+                const displayWidth = canvasRect.width;
+                const displayHeight = canvasRect.height;
                 
-                // 计算像素在画布上的实际位置（考虑像素大小）
-                const pixelX = x * pixelSize;
-                const pixelY = y * pixelSize;
+                // 计算缩放比例
+                const scaleX = displayWidth / canvasWidth;
+                const scaleY = displayHeight / canvasHeight;
+                
+                // 计算像素在显示尺寸中的位置
+                const pixelX = x * pixelSize * scaleX;
+                const pixelY = y * pixelSize * scaleY;
                 
                 // 设置水平线位置（在像素中心）
-                horizontalLine.style.top = `${pixelY + pixelSize/2}px`;
+                horizontalLine.style.top = `${pixelY + pixelSize * scaleY / 2}px`;
                 
                 // 设置垂直线位置（在像素中心）
-                verticalLine.style.left = `${pixelX + pixelSize/2}px`;
+                verticalLine.style.left = `${pixelX + pixelSize * scaleX / 2}px`;
                 
                 // 设置坐标标签位置（稍微偏移避免遮挡）
-                let labelX = pixelX + pixelSize/2 + 5;
-                let labelY = pixelY + pixelSize/2 + 5;
+                let labelX = pixelX + pixelSize * scaleX / 2 + 5;
+                let labelY = pixelY + pixelSize * scaleY / 2 + 5;
                 
-                // 确保标签不会超出画布
-                if (labelX + 80 > pixelCanvas.width) {
-                    labelX = pixelX + pixelSize/2 - 85;
+                // 构建标签内容
+                let labelText = `X: ${x}, Y: ${y}`;
+                if (hex && colorIndex >= 0) {
+                    labelText += `<br>颜色: ${hex}<br>编号: #${colorIndex + 1}`;
                 }
-                if (labelY + 20 > pixelCanvas.height) {
-                    labelY = pixelY + pixelSize/2 - 25;
+                
+                // 确保标签不会超出画布显示区域
+                if (labelX + 100 > displayWidth) {
+                    labelX = pixelX + pixelSize * scaleX / 2 - 105;
+                }
+                if (labelY + 60 > displayHeight) {
+                    labelY = pixelY + pixelSize * scaleY / 2 - 65;
                 }
                 
                 coordLabel.style.left = `${labelX}px`;
                 coordLabel.style.top = `${labelY}px`;
-                coordLabel.textContent = `X: ${x}, Y: ${y}`;
+                coordLabel.innerHTML = labelText;
                 
                 // 显示标注线
                 pixelMarker.style.display = 'block';
@@ -1665,6 +1812,131 @@
                 link.download = 'pixel-art.png';
                 link.href = pixelCanvas.toDataURL('image/png');
                 link.click();
+            }
+
+            // 更新颜色统计显示
+            function updateColorStatistics() {
+                if (!pixelData || Object.keys(colorStats).length === 0) {
+                    colorStatistics.style.display = 'none';
+                    return;
+                }
+
+                statisticsContent.innerHTML = '';
+                colorStatistics.style.display = 'block';
+
+                const totalPixels = pixelWidth * pixelHeight;
+                
+                // 按使用频次排序
+                const sortedStats = Object.entries(colorStats).sort((a, b) => b[1] - a[1]);
+
+                sortedStats.forEach(([color, count]) => {
+                    const colorIndex = currentPalette.indexOf(color);
+                    const percentage = ((count / totalPixels) * 100).toFixed(2);
+
+                    const statItem = document.createElement('div');
+                    statItem.className = 'stat-item';
+                    
+                    const colorBox = document.createElement('div');
+                    colorBox.className = 'stat-color-box';
+                    colorBox.style.backgroundColor = color;
+                    colorBox.style.borderLeftColor = color;
+                    colorBox.title = `点击高亮此颜色`;
+                    
+                    // 添加点击高亮事件
+                    colorBox.addEventListener('click', () => {
+                        highlightColor(color);
+                    });
+
+                    const statInfo = document.createElement('div');
+                    statInfo.className = 'stat-info';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'stat-label';
+                    label.textContent = `颜色 #${colorIndex >= 0 ? colorIndex + 1 : '?'} - ${color}`;
+                    
+                    const numbers = document.createElement('div');
+                    numbers.className = 'stat-numbers';
+                    numbers.textContent = `使用 ${count} 次`;
+
+                    const percentageSpan = document.createElement('span');
+                    percentageSpan.className = 'stat-percentage';
+                    percentageSpan.textContent = `(${percentage}%)`;
+                    numbers.appendChild(percentageSpan);
+
+                    statInfo.appendChild(label);
+                    statInfo.appendChild(numbers);
+
+                    statItem.appendChild(colorBox);
+                    statItem.appendChild(statInfo);
+
+                    statisticsContent.appendChild(statItem);
+                });
+            }
+
+            // 高亮显示指定颜色
+            function highlightColor(color) {
+                // 清除之前的定时器
+                if (highlightTimeout) {
+                    clearTimeout(highlightTimeout);
+                }
+
+                if (!pixelData) return;
+
+                const ctx = pixelCanvas.getContext('2d');
+                const originalImageData = ctx.getImageData(0, 0, pixelCanvas.width, pixelCanvas.height);
+                const data = originalImageData.data;
+
+                // 创建高亮遮罩
+                for (let y = 0; y < pixelHeight; y++) {
+                    for (let x = 0; x < pixelWidth; x++) {
+                        const pixelColor = pixelData[y][x];
+                        
+                        if (pixelColor !== color) {
+                            // 将该像素区域变暗
+                            for (let dy = 0; dy < pixelSize; dy++) {
+                                for (let dx = 0; dx < pixelSize; dx++) {
+                                    const canvasX = x * pixelSize + dx;
+                                    const canvasY = y * pixelSize + dy;
+                                    const index = (canvasY * pixelCanvas.width + canvasX) * 4;
+                                    
+                                    if (index >= 0 && index < data.length) {
+                                        data[index] = Math.floor(data[index] * 0.3); // R
+                                        data[index + 1] = Math.floor(data[index + 1] * 0.3); // G
+                                        data[index + 2] = Math.floor(data[index + 2] * 0.3); // B
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 应用高亮效果
+                ctx.putImageData(originalImageData, 0, 0);
+
+                // 5秒后恢复
+                highlightTimeout = setTimeout(() => {
+                    restorePixelArt();
+                }, 5000);
+            }
+
+            // 恢复像素画显示
+            function restorePixelArt() {
+                if (!pixelData) return;
+
+                const ctx = pixelCanvas.getContext('2d');
+                ctx.clearRect(0, 0, pixelCanvas.width, pixelCanvas.height);
+
+                for (let y = 0; y < pixelHeight; y++) {
+                    for (let x = 0; x < pixelWidth; x++) {
+                        const color = pixelData[y][x];
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+
+                // 更新检查器显示
+                updateInspectorDisplay();
+                highlightTimeout = null;
             }
 
             // 导出配置
