@@ -687,6 +687,7 @@
         <header>
             <h1>像素画生成器</h1>
             <p class="subtitle">上传图片，智能生成色卡，自定义编辑，生成独特的像素艺术</p>
+            <p class="subtitle" style="font-size:0.85rem;opacity:0.7;margin-top:6px;">支持从原图点击取色补色 · 所有处理均在本地完成</p>
         </header>
         
         <div class="content">
@@ -718,6 +719,12 @@
                     <h2>自定义色卡</h2>
                     <div class="custom-palette" id="customPalette">
                         <div class="color-box add-color" id="addColor">+</div>
+                    </div>
+                    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+                        <style>.picker-active{cursor:crosshair!important}.picker-active-canvas{outline:3px solid #6a11cb;outline-offset:2px;border-radius:4px}</style>
+                        <button id="pickerBtn" style="flex:1;padding:8px 12px;background:#6a11cb;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.85rem;font-weight:600;">从原图取色</button>
+                        <div id="pickedColorPreview" style="width:32px;height:32px;border-radius:6px;border:2px solid #ddd;background:#eee;flex-shrink:0;" title="取到的颜色"></div>
+                        <span id="pickedColorValue" style="font-size:0.8rem;color:#666;min-width:55px;"></span>
                     </div>
                 </div>
                 
@@ -887,6 +894,7 @@
                 <ol class="help-steps">
                     <li>点击或拖放图片到左侧"上传图片"区域</li>
                     <li>选择或自定义色卡（颜色方案）</li>
+                    <li>色卡缺颜色？点击"从原图取色"→再点原图中缺失颜色的位置，自动添加到色卡</li>
                     <li>调整像素大小和画布尺寸参数</li>
                     <li>点击"生成像素画"按钮</li>
                     <li>使用像素检查器查看和分析像素细节</li>
@@ -907,7 +915,8 @@
                     <p>提供6种预设色卡：灰度、彩虹、海洋、鲜艳、柔和、自适应。</p>
                     <ul class="help-steps">
                         <li><strong>自适应色卡</strong>：会分析上传图片的颜色，生成与之匹配的色卡</li>
-                        <li><strong>自定义色卡</strong>：点击"+"添加颜色</li>
+                        <li><strong>从原图取色</strong>：点击"从原图取色"按钮→再点原图中想取色的位置→颜色自动添加到色卡</li>
+                        <li><strong>自定义色卡</strong>：点击"+"按钮手动输入十六进制颜色值</li>
                         <li>色卡中颜色：单击高亮显示（生成像素画后），双击编辑，点击"×"删除</li>
                     </ul>
                 </div>
@@ -964,6 +973,7 @@
                     <li>创建满意的配置后导出保存，便于日后重复使用</li>
                     <li>利用颜色统计功能了解每种颜色的使用情况，优化色卡选择</li>
                     <li>点击颜色统计中的颜色可快速查看该颜色在像素画中的分布</li>
+                    <li>自适应色卡缺失颜色时，先用"从原图取色"补色，再点"生成像素画"刷新</li>
                 </ul>
             </div>
             
@@ -1049,6 +1059,7 @@
             let pixelWidth = 64; // 用于像素检查器的像素宽度
             let pixelHeight = 64; // 用于像素检查器的像素高度
             let pixelData = null; // 存储像素画每个像素的颜色索引
+            let isPickerActive = false; // 取色模式
             let colorStats = {}; // 存储颜色统计信息
             let highlightTimeout = null; // 高亮定时器
             
@@ -1086,6 +1097,52 @@
             fileInput.addEventListener('change', handleImageUpload);
             generateBtn.addEventListener('click', generatePixelArt);
             downloadBtn.addEventListener('click', downloadPixelArt);
+            
+            // 取色模式
+            const pickerBtn = document.getElementById('pickerBtn');
+            const pickedColorPreview = document.getElementById('pickedColorPreview');
+            const pickedColorValue = document.getElementById('pickedColorValue');
+            
+            pickerBtn.addEventListener('click', () => {
+                isPickerActive = !isPickerActive;
+                pickerBtn.textContent = isPickerActive ? '关闭取色' : '从原图取色';
+                pickerBtn.style.background = isPickerActive ? '#e74c3c' : '#6a11cb';
+                originalCanvas.classList.toggle('picker-active-canvas', isPickerActive);
+                document.body.classList.toggle('picker-active', isPickerActive);
+            });
+            
+            originalCanvas.addEventListener('click', (e) => {
+                if (!isPickerActive || !originalImage) return;
+                
+                const rect = originalCanvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) * (originalCanvas.width / rect.width));
+                const y = Math.floor((e.clientY - rect.top) * (originalCanvas.height / rect.height));
+                
+                if (x < 0 || x >= originalCanvas.width || y < 0 || y >= originalCanvas.height) return;
+                
+                const ctx = originalCanvas.getContext('2d');
+                const pixel = ctx.getImageData(x, y, 1, 1).data;
+                const r = pixel[0], g = pixel[1], b = pixel[2];
+                const hex = rgbToHex(r, g, b);
+                
+                // 预览显示
+                pickedColorPreview.style.background = hex;
+                pickedColorValue.textContent = hex;
+                
+                // 添加到色卡
+                if (!currentPalette.includes(hex)) {
+                    currentPalette.push(hex);
+                    updateCustomPaletteDisplay();
+                    palettes.adaptive = [...currentPalette];
+                }
+                
+                // 自动关闭取色模式
+                isPickerActive = false;
+                pickerBtn.textContent = '从原图取色';
+                pickerBtn.style.background = '#6a11cb';
+                originalCanvas.classList.remove('picker-active-canvas');
+                document.body.classList.remove('picker-active');
+            });
             
             pixelSizeSlider.addEventListener('input', () => {
                 pixelSizeValue.textContent = pixelSizeSlider.value;
